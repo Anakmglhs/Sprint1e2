@@ -25,11 +25,13 @@ class EventoController extends Controller
      */
     public function show($id)
     {
-        $evento = Evento::find($id);
+        $evento = Evento::findOrFail($id);
 
         // ⚠ BUG LEGADO: Carrega TODOS os registros da tabela no PHP
-        $perguntas = Pergunta::all();
-
+        $perguntas = Pergunta::where('evento_id', $id)
+        ->with('user')
+        ->latest()
+        ->paginate(10);
         return view('eventos.show', compact('evento', 'perguntas'));
     }
 
@@ -43,11 +45,25 @@ class EventoController extends Controller
 
         Pergunta::create([
             'evento_id' => $evento->id,
-            'texto'     => $request->input('texto'),
+            'texto'     => $request->validated('texto'),
             'status'    => 'pendente',
         ]);
 
         return redirect()->route('eventos.show', $evento->id)
             ->with('sucesso', 'Sua pergunta foi enviada com sucesso!');
+    }
+
+    /**
+     * DELETAR PERGUNTA
+     */
+    public function destroyPergunta($id)
+    {
+        $pergunta = Pergunta::findOrFail($id);
+        $eventoId = $pergunta->evento_id;
+
+        $pergunta->delete();
+
+        return redirect()->route('eventos.show', $eventoId)
+            ->with('sucesso', 'Pergunta removida com sucesso!');
     }
 }
